@@ -12,6 +12,8 @@ import signal
 import time
 import pygame
 import threading
+from PIL import Image
+import moviepy.video.io.ImageSequenceClip
 
 from .alsa_config import parse_hw_device
 from .model import Playlist, Movie
@@ -346,11 +348,45 @@ class VideoLooper:
                         self._print("s was pressed. stopping...")
                         self._playbackStopped = True
                         self._player.stop(3)
+    
+    def convert_images_to_video(self):
+        paths = self._reader.search_paths()
+        for path in paths:
+            if not os.path.exists(path) or not os.path.isdir(path):
+                continue
+            if os.path.exists(os.path.join(path , 'images'):
+                image_folder = os.path.join(path , 'images')
+                fps=0.25
+                mean_height = 0
+                mean_width = 0
+
+                images = os.listdir(image_folder)
+                num_of_images = len(images)
+
+                for file in images:
+                    im = Image.open(os.path.join(image_folder , file))
+                    width , height = im.size
+                    mean_height += height
+                    mean_width += width
+                
+                mean_width = int(mean_width / num_of_images) 
+                mean_height = int(mean_height / num_of_images) 
+
+                for file in images:
+                    im = Image.open(os.path.join(image_folder , file))
+                    imResize = im.resize((mean_width, mean_height), Image.ANTIALIAS)  
+                    imResize.save(os.path.join(image_folder , file), quality = 95)
+                    print(file , "resized")
+
+                image_files = [image_folder+'/'+img for img in os.listdir(image_folder)]
+                clip = moviepy.video.io.ImageSequenceClip.ImageSequenceClip(image_files, fps=fps)
+                clip.write_videofile(os.path.join(path , 'videopi.mp4')
 
 
     def run(self):
         """Main program loop.  Will never return!"""
         # Get playlist of movies to play from file reader.
+        self.convert_images_to_video()
         playlist = self._build_playlist()
         self._prepare_to_run_playlist(playlist)
         self._set_hardware_volume()
@@ -414,8 +450,6 @@ class VideoLooper:
         if self._player is not None:
             self._player.stop()
         pygame.quit()
-
-
 
     def signal_quit(self, signal, frame):
         """Shut down the program, meant to by called by signal handler."""
